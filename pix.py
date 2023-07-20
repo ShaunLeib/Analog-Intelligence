@@ -82,7 +82,7 @@ def static_edge(image):
     
 
 def main():
-    image = cv.imread("./colorTest.jpg") # ,0 param to grayscale
+    image = cv.imread("./Pictures/blurred.jpg") # ,0 param to grayscale
     h,w = image.shape[:2]
     B,G,R = cv.split(image)
     print("shape; ", image.shape)
@@ -111,7 +111,11 @@ def main():
     bgr_merge = cv.merge([B_edge,G_edge,R_edge])
     bgr_merge = shadow_floor(bgr_merge)
     bgr_merge = highlight_ceiling(bgr_merge)
-    cv.imshow("BGR", bgr_merge)
+    cv.imshow("BGR.jpg", bgr_merge)
+    # cv.imwrite("blurred_edge.jpg", floored)
+    # cv.imwrite("otherFlower_combo.jpg", brightness)
+    # cv.imwrite("chuck_BGR.jpg", bgr_merge)
+    cv.imwrite("blurred_other.jpg", other_edge_image)
 
 
 
