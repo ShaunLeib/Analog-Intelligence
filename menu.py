@@ -13,16 +13,42 @@ class Menu(ctk.CTkTabview):
         # self.add("Deep")
         self.add('Color')
         self.add('Effects')
+        # self.add("Select")
         self.add('Export')
 
-        MainFrame(self.tab("Home"), secondary_params)
+        HomeFrame(self.tab("Home"), secondary_params)
         PositionFrame(self.tab('Position'), position)
         ConvolutionFrame(self.tab("Convolutions"), convolution)
         ColorFrame(self.tab('Color'), color)
         EffectFrame(self.tab('Effects'), effect)
+        # SelectFrame(self.tab("Select"))
         ExportFrame(self.tab('Export'), export_image)
 
-class MainFrame(ctk.CTkFrame):
+    def update_params(self, position, convolution, color, effect, secondary_params, export_image):
+        self.delete("Home")
+        self.delete('Position')
+        self.delete("Convolutions")
+        # self.delete("Deep")
+        self.delete('Color')
+        self.delete('Effects')
+        self.delete('Export')
+        self.add("Home")
+        self.add('Position')
+        self.add("Convolutions")
+        # self.add("Deep")
+        self.add('Color')
+        self.add('Effects')
+        self.add('Export')
+
+        HomeFrame(self.tab("Home"), secondary_params)
+        PositionFrame(self.tab('Position'), position)
+        ConvolutionFrame(self.tab("Convolutions"), convolution)
+        ColorFrame(self.tab('Color'), color)
+        EffectFrame(self.tab('Effects'), effect)
+        # SelectFrame(self.tab("Select"))
+        ExportFrame(self.tab('Export'), export_image)
+
+class HomeFrame(ctk.CTkFrame):
     def __init__(self, parent, secondary_params):
         super().__init__(master = parent, fg_color = 'transparent')
         self.pack(expand = True, fill = 'both')
@@ -84,7 +110,9 @@ class ConvolutionFrame(ctk.CTkFrame):
                 (convolution['sharpen'], SHARPEN_DEFAULT),
                 (convolution['point'], POINT_EDGE_DEFAULT),
                 (convolution["shadow_floor"], SHADOW_FLOOR_DEFAULT), 
-                (convolution["highlight_ceiling"], HIGHLIGHT_CEILING_DEFAULT))        
+                (convolution["highlight_ceiling"], HIGHLIGHT_CEILING_DEFAULT))   
+                
+                     
 
 class ExportFrame(ctk.CTkFrame):
     def __init__(self, parent, export_image):

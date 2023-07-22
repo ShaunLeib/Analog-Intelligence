@@ -5,7 +5,6 @@ import cv2
 from PIL import Image, ImageTk, ImageOps, ImageEnhance, ImageFilter
 from menu import Menu
 from imageWindow import ImageWindow
-from secondaryImageWindow import SecondaryImageWindow
 import numpy as np
         
 
@@ -20,6 +19,12 @@ class App(ctk.CTk):
         self.minsize(100, 1300)
         self.image_params = self.init_params()
         self.secondary_windows = self.init_secondary()
+        self.images_arr = []
+        self.params_arr = []
+        self.params_arr.append(self.image_params)
+        self.current_tab = ctk.IntVar(value = 0)
+        self.current_tab.trace('w', self.tab_changed)
+        self.current_params = self.params_arr[self.current_tab.get()]
 
         # layout
         self.rowconfigure(0, weight = 1)
@@ -66,17 +71,7 @@ class App(ctk.CTk):
             "blue" : ctk.IntVar(value = 0)
         }
         self.trace_secondary_vars(secondary_windows)
-        return secondary_windows 
-        #1. add var here
-        #2. Add to var to Menu in import_image
-        #3. in menu change: init, coresponding frame, frame class param, add panel to class
-        #4. trace it
-        #5. make image manipulation logic
-
-        #get changes from slider
-
-        #tracing
-        
+        return secondary_windows         
 
     def trace_secondary_vars(self, secondary_windows):
         secondary_windows['new'].trace('w', self.new_image_window)
@@ -87,24 +82,38 @@ class App(ctk.CTk):
                 var.trace("w", self.update_params)
 
     def update_params(self, *args):
-        self.image_window.manipulate_image(self.image_params)
+        self.images_arr[self.current_tab.get()].manipulate_image(self.params_arr[self.current_tab.get()])
     
+    def change_current_tab(self, event):
+        self.current_tab.set(self.image_window.get_currently_selected_tab())
+
+    def tab_changed(self, *args):
+        if len(self.images_arr) != 0:
+            self.current_image = self.images_arr[self.current_tab.get()]
+            self.current_params = self.params_arr[self.current_tab.get()]
+            self.menu.update_params(self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.secondary_windows, self.export_image)
+
     def new_image_window(self, *args):
         if self.secondary_windows['new'].get() == 1:
-            path = tk.filedialog.askopenfile().name
-            self.secondary_original = cv2.imread(path)
-            self.secondary_iamge_params = self.init_params()
-            self.secondary_image_window = SecondaryImageWindow(self, self.secondary_iamge_params,self.secondary_original)
-            # self.secondary_image_window.exist.trace("w", asdf)
-            # SecondaryImageWindow()
+            path = tk.filedialog.askopenfile()
+            if path is not None:
+                path = path.name
+                new_params = self.init_params()
+                self.params_arr.append(new_params)
+                self.images_arr.append(self.image_window.add_secondary_image(cv2.imread(path), new_params))
+                self.secondary_windows['new'].set(0)
+            else:
+                tk.messagebox.showinfo(title = "Error", message = "No path entered.")
 
 
     def import_image(self, path):
-        self.original = cv2.imread(path)
+        self.current_tab.set(0)
         self.image_import.grid_forget()
-        self.image_window = ImageWindow(self, self.image_params, self.original)
+        self.image_window = ImageWindow(self, self.change_current_tab)
+        self.images_arr.append(self.image_window.add_main_image(cv2.imread(path), self.image_params))
+        self.current_image = self.images_arr[self.current_tab.get()]
         self.image_window.exists.trace('w', self.image_window_closed)
-        self.menu = Menu(self, self.image_params['position'], self.image_params['convolution'], self.image_params['color'], self.image_params['effect'], self.secondary_windows, self.export_image)
+        self.menu = Menu(self, self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.secondary_windows, self.export_image)
 
 
     def image_window_closed(self, *args):
@@ -121,7 +130,7 @@ class App(ctk.CTk):
             tk.messagebox.showinfo(title = "Error", message = "You did not enter a name")
         else:
             export_path = f"{path}/{name}.{file_str}"
-            image = self.image_window.get_image()
+            image = self.images_arr[0].get_image()
             cv2.imwrite(export_path, image)
             self.image_window.close_edit()
 

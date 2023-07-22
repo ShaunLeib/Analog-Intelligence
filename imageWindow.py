@@ -7,15 +7,66 @@ import numpy as np
 
 
 class ImageWindow(ctk.CTkToplevel):
-    def __init__(self, parent, params, image):
+    def __init__(self, parent, callback):
         super().__init__(parent)
         self.title("Analog Intelligence")
         self.geometry("1700x1300+600+100")
         self.protocol('WM_DELETE_WINDOW', self.close_edit)
         self.minsize(800, 500)
-        self.image_output = ImageOutput(self, self.resize_image)
-        self.close_button = CloseOutput(self, self.close_edit)
+        self.notebook = tk.ttk.Notebook(self)
+        self.notebook.pack(fill = 'both', expand = True)
         self.exists = ctk.IntVar(value = 1)
+        self.notebook.bind('<<NotebookTabChanged>>', callback)
+        self.merge_button = ctk.CTkButton(self, text = "Merge", command = self.merge)
+        self.frame_array = []
+
+    def add_main_image(self, image, params):
+        new_image = ImageDisplay(self, image, params)
+        self.frame_array.append(new_image)
+        self.notebook.add(new_image, text = "Main Image")
+        return new_image
+
+    def add_secondary_image(self, image, params):
+        new_image = SecondaryImageDisplay(self, image, params)
+        new_button = ctk.CTkButton(new_image, text = "Merge", command = self.merge)
+        new_button.pack(pady = 10)
+        self.frame_array.append(new_image)
+        self.notebook.add(new_image, text = "Secondary Image")
+        new_image.exists.trace('w', self.delete_frame)
+        return new_image
+
+    def close_edit(self):
+        if tk.messagebox.askokcancel("Close", "Do you want to continue?"):
+            self.exists.set(0)
+            self.notebook.pack_forget()
+
+    def get_currently_selected_tab(self):
+        return self.notebook.index(self.notebook.select())
+    
+    def delete_frame(self, *args):
+        idx = self.get_currently_selected_tab()
+        self.notebook.forget(idx)
+
+    def merge(self):
+        indx = self.get_currently_selected_tab()
+        if indx == 0:
+            tk.messagebox.showinfo(title = "Error", message = "Unable to merge with main")
+        else:
+            alpha = tk.simpledialog.askfloat(title = "Alpha", prompt = "Enter the percentage of blending you want with the main image. The higher the number, the more this image will show. Defualt = 0.5")
+            main_image = self.frame_array[0]
+            selected_image = self.frame_array[indx].get_image()
+            if alpha is not None and alpha < 1 and alpha > 0:
+                beta = 1 - alpha
+                new_image = cv2.addWeighted(main_image.get_image(), beta, selected_image, alpha, 0)
+                main_image.set_image(new_image)
+                self.notebook.forget(indx)
+            else:
+                tk.messagebox.showinfo(title = "Error", message = "Number must be between 0-1.")        
+
+class ImageDisplay(ctk.CTkFrame):
+    def __init__(self, parent, image, params):
+        super().__init__(master = parent)
+        self.image_output = ImageOutput(self, self.resize_image)
 
         self.original = image
         self.image = self.original
@@ -31,18 +82,19 @@ class ImageWindow(ctk.CTkToplevel):
         
         self.image_height, self.image_width = self.image.shape[:2]
         self.image_ratio = self.image_width / self.image_height
-        
-        
 
-    def close_edit(self):
-        if tk.messagebox.askokcancel("Close", "Do you want to continue?"):
-            self.close_button.place_forget()
-            self.image_output.pack_forget()
-            self.exists.set(0)
 
+
+    def set_image(self, image):
+        self.original = image
+        self.image = self.original
+        self.place_image()
+    
     def get_image(self):
         return self.image
 
+    def get_image(self):
+        return self.image
 
     def resize_image(self, event):
         canvas_ratio = event.width / event.height
@@ -60,8 +112,9 @@ class ImageWindow(ctk.CTkToplevel):
 
     def place_image(self):
         self.image_output.delete('all')
-        resized_image = cv2.resize(self.image, (int(self.image_width), int(self.image_height)))
-        self.image_tk = self.cv2_to_tk(resized_image)
+        pil_image = self.cv2_to_pil(self.image)
+        resized_image = pil_image.resize((int(self.image_width), int(self.image_height)), Image.LANCZOS)
+        self.image_tk = self.pil_to_tk(resized_image)
         self.image_output.create_image(self.canvas_width/2, self.canvas_height/2, image = self.image_tk)
 
     
@@ -78,8 +131,6 @@ class ImageWindow(ctk.CTkToplevel):
     def cv2_to_tk(self, image):
         pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         return ImageTk.PhotoImage(pil)
-
-
 
 
  # image manipulation
@@ -237,4 +288,17 @@ class ImageWindow(ctk.CTkToplevel):
 
         self.image = self.pil_to_cv2(pil_image) 
 
+
+class SecondaryImageDisplay(ImageDisplay):
+    def __init__(self, parent, image, params):
+        super().__init__(parent, image, params)
+        self.close_button = CloseOutput(self, self.close_edit)
+        self.exists = ctk.IntVar(value = 1)
+
+    def close_edit(self):
+        if tk.messagebox.askokcancel("Close", "Do you want to continue?"):
+            self.close_button.place_forget()
+            self.image_output.pack_forget()
+            self.exists.set(0)
+            
     

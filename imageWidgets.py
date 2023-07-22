@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from tkinter import filedialog, Canvas
+from tkinter import filedialog, Canvas, messagebox
 from settings import *
 
 class ImageImport(ctk.CTkFrame):
@@ -10,8 +10,12 @@ class ImageImport(ctk.CTkFrame):
         ctk.CTkButton(self, text = 'open image', command = self.open_dialog).pack(expand = True)
 
     def open_dialog(self):
-        path = filedialog.askopenfile().name
-        self.import_funciton(path)
+        path = filedialog.askopenfile()
+        if path is not None:
+            path = path.name
+            self.import_funciton(path)
+        else:
+            messagebox.showinfo(title = "Error", message = "No path entered.")
 
 class ImageOutput(Canvas):
     def __init__(self, parent, resize_image):
