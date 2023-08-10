@@ -5,7 +5,7 @@ from skimage.draw import line_aa
 
 
 class Selection(ABC):
-    def __init__(self, image_window):
+    def __init__(self, image_window, done):
         self.last_x = 0
         self.last_y = 0
         self.canvasx = 0
@@ -21,6 +21,7 @@ class Selection(ABC):
         self.horiz_start = 0
         self.horiz_end = 0
         self.horiz_ratio = 0
+        self.done = done
 
     def create_mask(self):
         return np.ones((self.height, self.width))
@@ -88,11 +89,12 @@ class Selection(ABC):
 
     def final(self):
         self.reset_params()
+        self.done.set(1)
 
 
 class Rectangle(Selection):
-    def __init__(self, image_window):
-        super().__init__(image_window)
+    def __init__(self, image_window, done):
+        super().__init__(image_window, done)
 
     def select(self):
         super().select()
@@ -123,8 +125,8 @@ class Rectangle(Selection):
 
 
 class Circle(Selection):
-    def __init__(self, image_window):
-        super().__init__(image_window)
+    def __init__(self, image_window, done):
+        super().__init__(image_window, done)
 
     def select(self):
         super().select()
@@ -158,8 +160,8 @@ class Circle(Selection):
 
 
 class Free(Selection):
-    def __init__(self, image_window):
-        super().__init__(image_window)
+    def __init__(self, image_window, done):
+        super().__init__(image_window, done)
 
     def select(self):
         super().select()
@@ -193,8 +195,8 @@ class Free(Selection):
 
 
 class Polygon(Selection):
-    def __init__(self, image_window):
-        super().__init__(image_window)
+    def __init__(self, image_window, done):
+        super().__init__(image_window, done)
 
     def select(self):
         super().select()

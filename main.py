@@ -6,8 +6,6 @@ from menu import Menu
 from imageWindow import ImageWindow
 from selection import Rectangle, Circle, Polygon, Free
 
-
-
 # TODO:
 # Get tools to just modify selected area (IDEA: invert mask & and merge)
 # Add error handling if free hand or poly selection isn't enclosed
@@ -15,9 +13,9 @@ from selection import Rectangle, Circle, Polygon, Free
 # Unselect option
 # in merge in image_window.py see comment
 
+
 class App(ctk.CTk):
     def __init__(self):
-        
         # setup
         super().__init__()
         ctk.set_appearance_mode('dark')
@@ -117,26 +115,33 @@ class App(ctk.CTk):
 
     def image_select(self, *args):
         selection = self.tools_params["select"].get()
-        print(selection)
         if selection == 1:
+            done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
-            free = Free(self.image_window)
+            free = Free(self.image_window, done)
             free.select()
+            self.wait_variable(done)
             self.image_window.resizable(True, True)
         elif selection == 2:
+            done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
-            rect = Rectangle(self.image_window)
+            rect = Rectangle(self.image_window, done)
             rect.select()
+            self.wait_variable(done)
             self.image_window.resizable(True, True)
         elif selection == 3:
+            done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
-            circ = Circle(self.image_window)
+            circ = Circle(self.image_window, done)
             circ.select()
+            self.wait_variable(done)
             self.image_window.resizable(True, True)
         elif selection == 4:
+            done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
-            poly = Polygon(self.image_window)
+            poly = Polygon(self.image_window, done)
             poly.select()
+            self.wait_variable(done)
             self.image_window.resizable(True, True)
 
     def import_image(self, path):
