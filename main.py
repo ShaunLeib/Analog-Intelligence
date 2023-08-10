@@ -2,11 +2,18 @@ import customtkinter as ctk
 import tkinter as tk
 from imageWidgets import *
 import cv2
-from PIL import Image, ImageTk, ImageOps, ImageEnhance, ImageFilter
 from menu import Menu
 from imageWindow import ImageWindow
-import numpy as np
-        
+from selection import Rectangle, Circle, Polygon, Free
+
+
+
+# TODO:
+# Get tools to just modify selected area (IDEA: invert mask & and merge)
+# Add error handling if free hand or poly selection isn't enclosed
+# organize code better
+# Unselect option
+# in merge in image_window.py see comment
 
 class App(ctk.CTk):
     def __init__(self):
@@ -18,7 +25,7 @@ class App(ctk.CTk):
         self.title('Tools')
         self.minsize(100, 1300)
         self.image_params = self.init_params()
-        self.secondary_windows = self.init_secondary()
+        self.tools_params = self.init_tools()
         self.images_arr = []
         self.params_arr = []
         self.params_arr.append(self.image_params)
@@ -31,9 +38,7 @@ class App(ctk.CTk):
         self.columnconfigure(0, weight = 2, uniform = 'a')
         self.columnconfigure(1, weight = 6, uniform = 'a')
 
-
         self.image_import = ImageImport(self, self.import_image)
-        
 
     def init_params(self):
         image_params = {
@@ -63,18 +68,23 @@ class App(ctk.CTk):
         self.trace_image_vars(image_params)
         return image_params
     
-    def init_secondary(self):
-        secondary_windows = {
+    def init_tools(self):
+        tools_params = {
             "new" : ctk.IntVar(value = 0),
             "red" : ctk.IntVar(value = 0),
             "green" : ctk.IntVar(value = 0),
-            "blue" : ctk.IntVar(value = 0)
+            "blue" : ctk.IntVar(value = 0),
+            "select" : ctk.IntVar(value = 0)
         }
-        self.trace_secondary_vars(secondary_windows)
-        return secondary_windows         
+        self.trace_tools_vars(tools_params)
+        return tools_params
 
-    def trace_secondary_vars(self, secondary_windows):
-        secondary_windows['new'].trace('w', self.new_image_window)
+    def trace_tools_vars(self, tools_params):
+        tools_params['new'].trace('w', self.new_image_window)
+        tools_params['red'].trace('w', self.new_image_window)
+        tools_params['green'].trace('w', self.new_image_window)
+        tools_params['blue'].trace('w', self.new_image_window)
+        tools_params['select'].trace('w', self.image_select)
 
     def trace_image_vars(self, image_params):
         for dict in image_params.values():
@@ -91,20 +101,43 @@ class App(ctk.CTk):
         if len(self.images_arr) != 0:
             self.current_image = self.images_arr[self.current_tab.get()]
             self.current_params = self.params_arr[self.current_tab.get()]
-            self.menu.update_params(self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.secondary_windows, self.export_image)
+            self.menu.update_params(self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.tools_params, self.export_image)
 
     def new_image_window(self, *args):
-        if self.secondary_windows['new'].get() == 1:
+        if self.tools_params['new'].get() == 1:
             path = tk.filedialog.askopenfile()
             if path is not None:
                 path = path.name
                 new_params = self.init_params()
                 self.params_arr.append(new_params)
                 self.images_arr.append(self.image_window.add_secondary_image(cv2.imread(path), new_params))
-                self.secondary_windows['new'].set(0)
+                self.tools_params['new'].set(0)
             else:
                 tk.messagebox.showinfo(title = "Error", message = "No path entered.")
 
+    def image_select(self, *args):
+        selection = self.tools_params["select"].get()
+        print(selection)
+        if selection == 1:
+            self.image_window.resizable(False, False)
+            free = Free(self.image_window)
+            free.select()
+            self.image_window.resizable(True, True)
+        elif selection == 2:
+            self.image_window.resizable(False, False)
+            rect = Rectangle(self.image_window)
+            rect.select()
+            self.image_window.resizable(True, True)
+        elif selection == 3:
+            self.image_window.resizable(False, False)
+            circ = Circle(self.image_window)
+            circ.select()
+            self.image_window.resizable(True, True)
+        elif selection == 4:
+            self.image_window.resizable(False, False)
+            poly = Polygon(self.image_window)
+            poly.select()
+            self.image_window.resizable(True, True)
 
     def import_image(self, path):
         self.current_tab.set(0)
@@ -113,7 +146,7 @@ class App(ctk.CTk):
         self.images_arr.append(self.image_window.add_main_image(cv2.imread(path), self.image_params))
         self.current_image = self.images_arr[self.current_tab.get()]
         self.image_window.exists.trace('w', self.image_window_closed)
-        self.menu = Menu(self, self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.secondary_windows, self.export_image)
+        self.menu = Menu(self, self.current_params['position'], self.current_params['convolution'], self.current_params['color'], self.current_params['effect'], self.tools_params, self.export_image)
 
 
     def image_window_closed(self, *args):

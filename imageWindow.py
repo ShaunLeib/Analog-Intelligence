@@ -47,7 +47,7 @@ class ImageWindow(ctk.CTkToplevel):
         idx = self.get_currently_selected_tab()
         self.notebook.forget(idx)
 
-    def merge(self):
+    def merge(self): # need to check for image size and channles
         indx = self.get_currently_selected_tab()
         if indx == 0:
             tk.messagebox.showinfo(title = "Error", message = "Unable to merge with main")
@@ -61,7 +61,35 @@ class ImageWindow(ctk.CTkToplevel):
                 main_image.set_image(new_image)
                 self.notebook.forget(indx)
             else:
-                tk.messagebox.showinfo(title = "Error", message = "Number must be between 0-1.")        
+                tk.messagebox.showinfo(title = "Error", message = "Number must be between 0-1.")   
+
+    def get_current_canvas(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_canvas()  
+
+    def get_current_original_image_size(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_original_image_size()
+    
+    def get_current_image_size(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_image_size()
+    
+    def get_current_canvas_difference(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_differences()
+        
+    def get_current_ratios(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_ratios()
+    
+    def get_main_image(self):
+        return self.frame_array[0].get_image() #change export image with this
+    
+    def get_current_image(self):
+        indx = self.get_currently_selected_tab()
+        return self.frame_array[indx].get_image()
+
 
 class ImageDisplay(ctk.CTkFrame):
     def __init__(self, parent, image, params):
@@ -69,6 +97,7 @@ class ImageDisplay(ctk.CTkFrame):
         self.image_output = ImageOutput(self, self.resize_image)
 
         self.original = image
+        self.original_height, self.original_width = self.original.shape[:2]
         self.image = self.original
         self.image_params = params
 
@@ -81,6 +110,7 @@ class ImageDisplay(ctk.CTkFrame):
 
         
         self.image_height, self.image_width = self.image.shape[:2]
+        
         self.image_ratio = self.image_width / self.image_height
 
 
@@ -92,32 +122,47 @@ class ImageDisplay(ctk.CTkFrame):
     
     def get_image(self):
         return self.image
+    
+    def get_canvas(self):
+        return self.image_output
 
-    def get_image(self):
-        return self.image
+    def get_original_image_size(self):
+        return (self.original_height, self.original_width)
+    
+    def get_image_size(self):
+        return (self.image_height, self.image_width)
+
+    def get_differences(self):
+        return self.vertical_canvas_difference, self.horizontal_canvas_difference
+    
+    def get_ratios(self):
+        return self.vertical_ratio, self.horizonal_ratio
 
     def resize_image(self, event):
-        canvas_ratio = event.width / event.height
+        self.canvas_ratio = event.width / event.height
 
         self.canvas_width = event.width
         self.canvas_height = event.height
 
-        if canvas_ratio > self.image_ratio:
+        if self.canvas_ratio > self.image_ratio:
             self.image_height = event.height
             self.image_width = self.image_height * self.image_ratio
         else:
             self.image_width = event.width
             self.image_height = self.image_width/self.image_ratio
+        self.horizontal_canvas_difference = (self.canvas_width - self.image_width) / 2
+        self.vertical_canvas_difference = (self.canvas_height - self.image_height) / 2
+        self.vertical_ratio = self.original_height / self.image_height
+        self.horizonal_ratio = self.original_width / self.image_width
         self.place_image()
 
     def place_image(self):
         self.image_output.delete('all')
         pil_image = self.cv2_to_pil(self.image)
-        resized_image = pil_image.resize((int(self.image_width), int(self.image_height)), Image.LANCZOS)
-        self.image_tk = self.pil_to_tk(resized_image)
+        pil_image.thumbnail((int(self.image_width), int(self.image_height)), Image.LANCZOS)
+        self.image_tk = self.pil_to_tk(pil_image)
         self.image_output.create_image(self.canvas_width/2, self.canvas_height/2, image = self.image_tk)
 
-    
     def pil_to_tk(self, pil_image):
         return ImageTk.PhotoImage(pil_image)
 
