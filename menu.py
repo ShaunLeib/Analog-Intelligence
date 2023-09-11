@@ -58,7 +58,7 @@ class HomeFrame(ctk.CTkFrame):
         self.pack(expand=True, fill='both')
         self.tool_params = tool_params
         self.button = ctk.CTkButton(self, text="Open", command=self.open_new)
-        self.button.pack()
+        self.button.pack(pady = 10, fill = 'x')
 
     def open_new(self):
         self.tool_params['new'].set(1)
@@ -69,10 +69,11 @@ class SelectFrame(ctk.CTkFrame):
         super().__init__(master=parent, fg_color='transparent')
         self.pack(expand=True, fill='both')
         self.select_params = select_params
-        ctk.CTkButton(self, text="Free", command=lambda: self.open_new(1)).pack()
-        ctk.CTkButton(self, text="Rectangle", command=lambda: self.open_new(2)).pack()
-        ctk.CTkButton(self, text="Circle", command=lambda: self.open_new(3)).pack()
-        ctk.CTkButton(self, text="Polygon", command=lambda: self.open_new(4)).pack()
+        ctk.CTkButton(self, text="Free", command=lambda: self.open_new(1)).pack(fill = 'x', pady = 10)
+        ctk.CTkButton(self, text="Rectangle", command=lambda: self.open_new(2)).pack(fill = 'x', pady = 10)
+        ctk.CTkButton(self, text="Circle", command=lambda: self.open_new(3)).pack(fill = 'x', pady = 10)
+        ctk.CTkButton(self, text="Polygon", command=lambda: self.open_new(4)).pack(fill = 'x', pady = 10)
+        ctk.CTkButton(self, text="Stop", command=lambda : self.open_new(5)).pack(fill = 'x', pady = 10)
 
     def open_new(self, selection):
         self.select_params["select"].set(selection)

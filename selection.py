@@ -22,18 +22,16 @@ class Selection(ABC):
         self.horiz_end = 0
         self.horiz_ratio = 0
         self.done = done
+        self.final_mask = None
+
+    def get_mask(self):
+        if self.final_mask is not None:
+            return self.final_mask
+        else:
+            raise RuntimeError("final mask hasn't been set yet")
 
     def create_mask(self):
         return np.ones((self.height, self.width))
-
-    def merge_selection_image(self, mask):
-        mask_3d = np.stack([mask] * 3, axis = -1)
-        image = self.image.copy()
-        bitwise = cv2.bitwise_and(image, mask_3d)
-        self.image_window.add_secondary_image(bitwise, ())
-        self.mask = self.create_mask()
-        self.canvas.delete("selection")
-        return bitwise
 
     def make_3d(self):
         return (self.mask * 255).astype(np.uint8)
@@ -42,6 +40,7 @@ class Selection(ABC):
         self.canvas.unbind("<Button-1>")
         self.canvas.unbind("<B1-Motion>")
         self.canvas.unbind("<ButtonRelease-1>")
+        self.canvas.unbind_all("<Escape>")
         self.last_y = 0
         self.last_x = 0
         self.canvasy = 0
@@ -58,7 +57,7 @@ class Selection(ABC):
         im_floodfill = im_th.copy()
         h, w = im_th.shape[:2]
         mask = np.zeros((h + 2, w + 2), np.uint8)
-        cv2.floodFill(im_floodfill, mask, (0, 0), (0, 0, 0))
+        cv2.floodFill(im_floodfill, mask, (0, 0), (0, 0, 0, 0))
         return im_floodfill
 
     def init_selection(self):
@@ -77,6 +76,7 @@ class Selection(ABC):
         self.canvasx = event.x
 
     def select(self):
+        self.canvas.bind_all("<Escape>", self.exit)
         self.init_selection()
 
     @abstractmethod
@@ -88,7 +88,16 @@ class Selection(ABC):
         pass
 
     def final(self):
+        mask_3d = np.stack([self.mask] * 4, axis=-1)
+        # image = self.image.copy()
+        # bitwise = cv2.bitwise_and(image, mask_3d)
+        self.final_mask = mask_3d
+        self.mask = self.create_mask()
+        self.canvas.delete("selection")
         self.reset_params()
+        self.done.set(1)
+
+    def exit(self, _event):
         self.done.set(1)
 
 
@@ -114,14 +123,13 @@ class Rectangle(Selection):
             y0 = self.align_y(y0)
             x1 = self.align_x(x1)
             y1 = self.align_y(y1)
-            self.mask = cv2.rectangle(self.mask, (x0, y0), (x1, y1), (0, 0, 0), -1)
+            self.mask = cv2.rectangle(self.mask, (x0, y0), (x1, y1), (0, 0, 0, 0), -1)
             self.final()
 
     def final(self):
-        super().final()
         selection = self.make_3d()
-        selection = cv2.bitwise_not(selection)
-        self.merge_selection_image(selection)
+        self.mask = cv2.bitwise_not(selection)
+        super().final()
 
 
 class Circle(Selection):
@@ -149,14 +157,13 @@ class Circle(Selection):
             vertical = int((y1 - y0) / 2)
             horizontal = int((x1 - x0) / 2)
             center = (horizontal + x0, vertical + y0)
-            self.mask = cv2.ellipse(self.mask, center, (horizontal, vertical), 0, 0, 360, (0,0,0), -1)
+            self.mask = cv2.ellipse(self.mask, center, (horizontal, vertical), 0, 0, 360, (0,0,0,0), -1)
             self.final()
 
     def final(self):
-        super().final()
         selection = self.make_3d()
-        selection = cv2.bitwise_not(selection)
-        self.merge_selection_image(selection)
+        self.mask = cv2.bitwise_not(selection)
+        super().final()
 
 
 class Free(Selection):
@@ -185,17 +192,16 @@ class Free(Selection):
         raise NotImplementedError("Stop method is not needed for free selection")
 
     def free_final(self, _event):
-        super().final()
         selection = self.make_3d()
-        filled_mask = self.fill_bounds(selection)
-        self.merge_selection_image(filled_mask)
+        self.mask = self.fill_bounds(selection)
+        super().final()
 
     def final(self):
         raise NotImplementedError("Use free_final instead of final for the free class")
 
 
 class Polygon(Selection):
-    def __init__(self, image_window, done):
+    def __init__(self, image_window,  done):
         super().__init__(image_window, done)
 
     def select(self):
@@ -235,9 +241,8 @@ class Polygon(Selection):
         return coords
 
     def final(self):
-        super().final()
         coords = self.get_poly_endpoints()
-        self.mask = cv2.polylines(self.mask, [coords], False, (0, 0, 0), 2)
+        self.mask = cv2.polylines(self.mask, [coords], False, (0, 0, 0, 0), 2)
         selection = self.make_3d()
-        filled_mask = self.fill_bounds(selection)
-        self.merge_selection_image(filled_mask)
+        self.mask = self.fill_bounds(selection)
+        super().final()

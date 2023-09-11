@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
+import numpy as np
 from imageWidgets import *
 import cv2
 from menu import Menu
@@ -7,10 +8,7 @@ from imageWindow import ImageWindow
 from selection import Rectangle, Circle, Polygon, Free
 
 # TODO:
-# Get tools to just modify selected area (IDEA: invert mask & and merge)
-# Add error handling if free hand or poly selection isn't enclosed
-# organize code better
-# Unselect option
+# Add error handling if free hand or poly option isn't enclosed
 # in merge in image_window.py see comment
 
 
@@ -85,8 +83,8 @@ class App(ctk.CTk):
         tools_params['select'].trace('w', self.image_select)
 
     def trace_image_vars(self, image_params):
-        for dict in image_params.values():
-            for var in dict.values():
+        for item in image_params.values():
+            for var in item.values():
                 var.trace("w", self.update_params)
 
     def update_params(self, *args):
@@ -114,35 +112,47 @@ class App(ctk.CTk):
                 tk.messagebox.showinfo(title = "Error", message = "No path entered.")
 
     def image_select(self, *args):
-        selection = self.tools_params["select"].get()
-        if selection == 1:
+        option = self.tools_params["select"].get()
+        mask = None
+        if option == 1:
             done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
             free = Free(self.image_window, done)
             free.select()
             self.wait_variable(done)
+            mask = free.get_mask()
+            self.image_window.get_image_display().set_selection(mask)
             self.image_window.resizable(True, True)
-        elif selection == 2:
+        elif option == 2:
             done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
             rect = Rectangle(self.image_window, done)
             rect.select()
             self.wait_variable(done)
+            mask = rect.get_mask()
+            self.image_window.get_image_display().set_selection(mask)
             self.image_window.resizable(True, True)
-        elif selection == 3:
+        elif option == 3:
             done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
             circ = Circle(self.image_window, done)
             circ.select()
             self.wait_variable(done)
+            mask = circ.get_mask()
+            self.image_window.get_image_display().set_selection(mask)
             self.image_window.resizable(True, True)
-        elif selection == 4:
+        elif option == 4:
             done = ctk.IntVar(value = 0)
             self.image_window.resizable(False, False)
             poly = Polygon(self.image_window, done)
             poly.select()
             self.wait_variable(done)
+            mask = poly.get_mask()
+            self.image_window.get_image_display().set_selection(mask)
             self.image_window.resizable(True, True)
+        elif option == 5:
+            # stop selection
+            self.image_window.get_image_display().set_selection()
 
     def import_image(self, path):
         self.current_tab.set(0)
